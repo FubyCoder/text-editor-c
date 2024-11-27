@@ -1,7 +1,8 @@
-#include "text-buffer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "text-buffer.h"
 
 text_buffer_t *create_text_buffer(size_t capacity) {
     text_buffer_t *buffer = malloc(sizeof(text_buffer_t));
@@ -50,7 +51,7 @@ void insert_char(text_buffer_t *buffer, size_t index, char *c) {
     buffer->count++;
 }
 
-void remove_char(text_buffer_t *buffer, int index) {
+void remove_char(text_buffer_t *buffer, size_t index) {
     if (index < 0 || index >= buffer->count) {
         return;
     }

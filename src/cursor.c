@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-cursor_t *create_cursor(int x, int y) {
+cursor_t *create_cursor(size_t x, size_t y) {
     cursor_t *cursor = malloc(sizeof(cursor_t));
 
     if (cursor == NULL) {
@@ -14,7 +14,7 @@ cursor_t *create_cursor(int x, int y) {
     return cursor;
 }
 
-void move_cursor(cursor_t *cursor, int new_x, int new_y) {
+void move_cursor(cursor_t *cursor, long new_x, long new_y) {
     if (new_x < 0) {
         cursor->x = 0;
     } else {

@@ -9,4 +9,4 @@ typedef struct TextBuffer {
 
 text_buffer_t *create_text_buffer(size_t capacity);
 void insert_char(text_buffer_t *buffer, size_t index, char *c);
-void remove_char(text_buffer_t *buffer, int index);
+void remove_char(text_buffer_t *buffer, size_t index);
