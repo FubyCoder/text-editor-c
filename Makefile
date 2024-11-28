@@ -1,3 +1,6 @@
+SOURCES := $(shell find ./src -name '*.c')
+CC := gcc
+
 main: ./src/main.c
 	mkdir -p ./bin
-	$(CC) ./src/cursor.c ./src/text-buffer.c ./src/main.c ./src/terminal.c -o ./bin/main -Wall -Wextra -pedantic -std=c2x
+	$(CC) $(SOURCES) -o ./bin/main -Wall -Wextra -pedantic -std=c2x
