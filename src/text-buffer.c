@@ -11,7 +11,7 @@ text_buffer_t *create_text_buffer(size_t capacity) {
         return NULL;
     }
 
-    buffer->data = malloc(capacity);
+    buffer->data = calloc(capacity, 1);
 
     if (buffer->data == NULL) {
         free(buffer);
@@ -26,14 +26,16 @@ text_buffer_t *create_text_buffer(size_t capacity) {
 }
 
 void resize_buffer(text_buffer_t *buffer) {
-    if (buffer->count == buffer->capacity) {
-        buffer->capacity *= 2;
-        buffer->data = realloc(buffer->data, buffer->capacity);
+    if (buffer->count != buffer->capacity) {
+        return;
+    }
 
-        if (buffer->data == NULL) {
-            free(buffer);
-            return;
-        }
+    buffer->capacity *= 2;
+    buffer->data = realloc(buffer->data, buffer->capacity);
+
+    if (buffer->data == NULL) {
+        free(buffer);
+        return;
     }
 }
 
@@ -49,6 +51,13 @@ void insert_char(text_buffer_t *buffer, size_t index, char *c) {
     }
 
     buffer->data[index] = *c;
+    buffer->count++;
+}
+
+void append_char(text_buffer_t *buffer, char *c) {
+    resize_buffer(buffer);
+
+    buffer->data[buffer->count] = *c;
     buffer->count++;
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "editor.h"
 #include <sys/ioctl.h>
 
 enum KEY_ACTION {
@@ -34,4 +35,4 @@ void move_cursor_in_terminal(int x, int y);
 void clear_terminal();
 int read_key(int fd);
 
-struct winsize *get_window_size();
+void update_window_size(editor_state_t *editor);

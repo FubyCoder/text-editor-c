@@ -12,21 +12,113 @@
 #include "terminal.h"
 #include "text-buffer.h"
 
-#define DEBUG
+#define DEBUG 1
 
-int main() {
+void load_file_in_editor(editor_state_t *editor, char *file_path) {
+    FILE *file = fopen(file_path, "r");
+    editor->file_path = file_path;
+
+    char c;
+
+    if (file == NULL) {
+        return;
+    }
+
+    size_t row_index = 0;
+    text_buffer_t *row = get_row(editor, row_index);
+    if (row == NULL) {
+        row = create_text_buffer(10);
+        append_row(editor, row);
+    }
+
+    while ((c = fgetc(file)) != EOF) {
+        if (c == '\n') {
+            row_index++;
+            row = get_row(editor, row_index);
+
+            if (row == NULL) {
+                row = create_text_buffer(10);
+                append_row(editor, row);
+            }
+        } else {
+            append_char(row, &c);
+        }
+    }
+
+    if (row->count > 0) {
+        append_row(editor, row);
+    }
+}
+
+void append_text(char **buffer, char *text, size_t size) {
+    char *tmp = realloc(*buffer, strlen(*buffer) + size + 1);
+    if (tmp == NULL) {
+        return;
+    }
+
+    *buffer = tmp;
+    strncat(*buffer, text, size);
+}
+
+void render_text(editor_state_t *editor, cursor_t *cursor) {
+    char *buffer = calloc(1, sizeof(char));
+
+    if (buffer == NULL) {
+        return;
+    }
+
+    char terminal_cursor[20];
+
+    int render_y = 0;
+    size_t y = 0;
+
+    // TODO: get this value inside editor->max_text_window_height (when it'll be added);
+    const int MAX_ITEMS_TO_RENDER = editor->terminal_height - 2 - 1;
+
+    if (editor->row_count < MAX_ITEMS_TO_RENDER) {
+        y = 0;
+    } else {
+        if (cursor->y + MAX_ITEMS_TO_RENDER < editor->row_count) {
+            y = cursor->y;
+        } else {
+            y = editor->row_count - MAX_ITEMS_TO_RENDER;
+        }
+    }
+
+    for (; render_y < MAX_ITEMS_TO_RENDER; y++, render_y++) {
+        text_buffer_t *row = get_row(editor, y);
+
+        if (row == NULL) {
+            append_text(&buffer, " ", 1);
+        } else {
+            append_text(&buffer, row->data, row->count);
+        }
+
+        sprintf(terminal_cursor, "\033[%d;%dH", render_y + 2, 1);
+        append_text(&buffer, terminal_cursor, strlen(terminal_cursor));
+    }
+
+    write(STDOUT_FILENO, buffer, strlen(buffer));
+    free(buffer);
+}
+
+int main(int argc, char *argv[]) {
     int c;
 
-    struct winsize *window = get_window_size();
     cursor_t *cursor = create_cursor(0, 0);
-    editor_file_t *editor = create_editor_file();
+    editor_state_t *editor = create_editor_file();
+    update_window_size(editor);
     text_buffer_t *first_row = create_text_buffer(2);
 
-    if (first_row == NULL || window == NULL || editor == NULL) {
+    if (first_row == NULL || editor == NULL) {
         exit(1);
     }
 
     append_row(editor, first_row);
+
+    if (argc > 1) {
+        load_file_in_editor(editor, argv[1]);
+    }
 
     static struct termios old_config, config;
 
@@ -58,16 +150,16 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &config);
 
     clear_terminal();
+    render_text(editor, cursor);
+
+    update_cursor_render_position(editor, cursor);
+    move_cursor_in_terminal(cursor->rx + 1, cursor->ry + 1);
 
     text_buffer_t *current_row;
 
     while (1) {
-        // window = get_window_size();
-        // if (window == NULL) {
-        //     exit(1);
-        // }
-
         c = read_key(STDIN_FILENO);
+        update_window_size(editor);
         current_row = get_row(editor, cursor->y);
 
         if (current_row == NULL) {
@@ -77,18 +169,18 @@ int main() {
         if (c == ESC) {
             break;
         } else if (c == BACKSPACE) {
-            remove_char(current_row, cursor->x - 1);
+            remove_char(current_row, cursor->rx - 1);
 
-            if (cursor->x == 0 && cursor->y > 0) {
+            if (cursor->rx == 0 && cursor->y > 0) {
                 size_t new_cursor_x = editor->rows[cursor->y - 1]->count;
                 merge_rows(editor, editor->rows[cursor->y - 1], editor->rows[cursor->y]);
                 move_cursor(cursor, new_cursor_x, cursor->y - 1);
             } else {
-                move_cursor(cursor, cursor->x - 1, cursor->y);
+                move_cursor(cursor, cursor->rx - 1, cursor->y);
             }
 
         } else if (c == DEL_KEY) {
-            if (cursor->x == current_row->count && cursor->y < editor->row_count - 1) {
+            if (cursor->rx == current_row->count && cursor->y < editor->row_count - 1) {
                 merge_rows(editor, editor->rows[cursor->y], editor->rows[cursor->y + 1]);
             } else {
                 remove_char(current_row, cursor->x);
@@ -104,7 +196,7 @@ int main() {
             }
 
             if (new_line == NULL) {
-                exit(1);
+                break;
             }
 
             if (new_len > 0) {
@@ -142,20 +234,19 @@ int main() {
         }
 
         clear_terminal();
-        for (size_t i = 0; i < editor->row_count; i++) {
-            move_cursor_in_terminal(0, i + 1);
-            write(STDOUT_FILENO, editor->rows[i]->data, editor->rows[i]->count);
-        }
-
+        render_text(editor, cursor);
         update_cursor_render_position(editor, cursor);
 
-#ifdef DEBUG
+#if (DEBUG == 1)
         printf("\n");
-        move_cursor_in_terminal(0, editor->row_count + 1);
-        printf("cursor pos render:(%zu,%zu) real:(%zu,%zu)\n", cursor->rx, cursor->ry, cursor->x, cursor->y);
+        move_cursor_in_terminal(0, editor->terminal_height - 1);
+        printf("cursor pos render:(%zu,%zu) real:(%zu,%zu) window-size(%i x %i)\n", cursor->rx, cursor->ry, cursor->x,
+               cursor->y, editor->terminal_width, editor->terminal_height);
+        // move_cursor_in_terminal(0, editor->terminal_height - 1);
+        // printf("Filename : %s\n", editor->file_path);
 #endif
 
-        move_cursor_in_terminal(cursor->rx, cursor->ry + 1);
+        move_cursor_in_terminal(cursor->rx + 1, cursor->ry + 1);
     }
 
     /*restore the old settings*/

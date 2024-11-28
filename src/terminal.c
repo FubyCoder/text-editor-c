@@ -5,6 +5,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include "editor.h"
 #include "terminal.h"
 
 const char *CLEAR_TERMINAL_STRING = "\033[2J\033[1;1H";
@@ -88,13 +89,11 @@ int read_key(int fd) {
     }
 }
 
-struct winsize *get_window_size() {
+void update_window_size(editor_state_t *editor) {
     struct winsize *w = malloc(sizeof(struct winsize));
-    if (w == NULL) {
-        return NULL;
-    }
-
     ioctl(STDOUT_FILENO, TIOCGWINSZ, w);
 
-    return w;
+    editor->terminal_width = w->ws_col;
+    editor->terminal_height = w->ws_row;
+    free(w);
 }

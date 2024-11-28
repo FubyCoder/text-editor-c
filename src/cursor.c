@@ -36,7 +36,7 @@ void move_cursor(cursor_t *cursor, long new_x, long new_y) {
     }
 }
 
-void update_cursor_render_position(editor_file_t *editor, cursor_t *cursor) {
+void update_cursor_render_position(editor_state_t *editor, cursor_t *cursor) {
     text_buffer_t *row = get_row(editor, cursor->y);
 
     if (cursor->x > row->count) {
@@ -45,5 +45,16 @@ void update_cursor_render_position(editor_file_t *editor, cursor_t *cursor) {
         cursor->rx = cursor->x;
     }
 
-    cursor->ry = cursor->y;
+    // TODO: get this value inside editor->max_text_window_height (when it'll be added);
+    const int MAX_ITEMS_TO_RENDER = editor->terminal_height - 2;
+
+    if (editor->row_count < MAX_ITEMS_TO_RENDER) {
+        cursor->ry = cursor->y;
+    } else {
+        if (cursor->y + MAX_ITEMS_TO_RENDER < editor->row_count) {
+            cursor->ry = 0;
+        } else {
+            cursor->ry = MAX_ITEMS_TO_RENDER - (editor->row_count - cursor->y);
+        }
+    }
 }

@@ -24,4 +24,4 @@ typedef struct Cursor {
 
 cursor_t *create_cursor(size_t x, size_t y);
 void move_cursor(cursor_t *cursor, long new_x, long new_y);
-void update_cursor_render_position(editor_file_t *editor, cursor_t *cursor);
+void update_cursor_render_position(editor_state_t *editor, cursor_t *cursor);
