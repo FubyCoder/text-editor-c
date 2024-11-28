@@ -8,40 +8,11 @@
 #include <unistd.h>
 
 #include "cursor.h"
+#include "editor.h"
 #include "terminal.h"
 #include "text-buffer.h"
 
-// #define DEBUG
-
-typedef struct EditorFile {
-    text_buffer_t **rows;
-    unsigned long row_count;
-} editor_file_t;
-
-void append_row(editor_file_t *editor, text_buffer_t *row) {
-    editor->rows = realloc(editor->rows, (editor->row_count + 1) * sizeof(text_buffer_t));
-    editor->rows[editor->row_count] = row;
-    editor->row_count++;
-}
-
-text_buffer_t *get_row(editor_file_t *editor, size_t row_index) {
-    if (row_index > editor->row_count) {
-        return NULL;
-    }
-
-    return editor->rows[row_index];
-}
-
-editor_file_t *create_editor_file() {
-    editor_file_t *editor = malloc(sizeof(editor_file_t));
-    if (editor == NULL) {
-        return NULL;
-    }
-
-    editor->row_count = 0;
-
-    return editor;
-}
+#define DEBUG
 
 int main() {
     int c;
@@ -107,43 +78,66 @@ int main() {
             break;
         } else if (c == BACKSPACE) {
             remove_char(current_row, cursor->x - 1);
+
             if (cursor->x == 0 && cursor->y > 0) {
-                move_cursor(cursor, editor->rows[cursor->y - 1]->count, cursor->y - 1);
+                size_t new_cursor_x = editor->rows[cursor->y - 1]->count;
+                merge_rows(editor, editor->rows[cursor->y - 1], editor->rows[cursor->y]);
+                move_cursor(cursor, new_cursor_x, cursor->y - 1);
             } else {
                 move_cursor(cursor, cursor->x - 1, cursor->y);
             }
 
         } else if (c == DEL_KEY) {
-            remove_char(current_row, cursor->x);
+            if (cursor->x == current_row->count && cursor->y < editor->row_count - 1) {
+                merge_rows(editor, editor->rows[cursor->y], editor->rows[cursor->y + 1]);
+            } else {
+                remove_char(current_row, cursor->x);
+            }
         } else if (c == ENTER) {
-            text_buffer_t *new_line = create_text_buffer(2);
+            size_t new_len = current_row->count - cursor->x;
+            text_buffer_t *new_line;
+
+            if (new_len > 0) {
+                new_line = create_text_buffer(new_len);
+            } else {
+                new_line = create_text_buffer(2);
+            }
+
             if (new_line == NULL) {
                 exit(1);
             }
 
-            // TODO handle new line in the middle of a row
-            append_row(editor, new_line);
+            if (new_len > 0) {
+                // Move bytes in new line
+                memmove(new_line->data, current_row->data + cursor->x, new_len);
+
+                // Clear moved memory in current_row (now this is in new_line)
+                for (size_t i = 0; i < new_len; i++) {
+                    current_row->data[i + cursor->x] = 0x0;
+                }
+
+                current_row->count -= new_len;
+                new_line->count = new_len;
+            }
+
+            insert_row(editor, cursor->y + 1, new_line);
             move_cursor(cursor, 0, cursor->y + 1);
         } else if (c == ARROW_UP) {
-            if (cursor->y > 0) {
-                // TODO: keep cursor position instead of resetting to 0
-                cursor->x = 0;
-            }
             move_cursor(cursor, cursor->x, cursor->y - 1);
         } else if (c == ARROW_DOWN) {
             if (cursor->y + 1 < editor->row_count) {
-                move_cursor(cursor, 0, cursor->y + 1);
+                move_cursor(cursor, cursor->x, cursor->y + 1);
             }
         } else if (c == ARROW_LEFT) {
-            move_cursor(cursor, cursor->x - 1, cursor->y);
+            move_cursor(cursor, cursor->rx - 1, cursor->y);
         } else if (c == ARROW_RIGHT) {
-            if (cursor->x < first_row->count) {
-                move_cursor(cursor, cursor->x + 1, cursor->y);
+            if (cursor->x < current_row->count) {
+                move_cursor(cursor, cursor->rx + 1, cursor->y);
             }
         } else {
             if (isprint(c)) {
-                insert_char(current_row, cursor->x, (char *)&c);
-                move_cursor(cursor, cursor->x + 1, cursor->y);
+                insert_char(current_row, cursor->rx, (char *)&c);
+                move_cursor(cursor, cursor->rx + 1, cursor->y);
             }
         }
 
@@ -153,13 +147,15 @@ int main() {
             write(STDOUT_FILENO, editor->rows[i]->data, editor->rows[i]->count);
         }
 
+        update_cursor_render_position(editor, cursor);
+
 #ifdef DEBUG
         printf("\n");
         move_cursor_in_terminal(0, editor->row_count + 1);
-        printf("cursor pos (%zu,%zu)\n", cursor->x, cursor->y);
+        printf("cursor pos render:(%zu,%zu) real:(%zu,%zu)\n", cursor->rx, cursor->ry, cursor->x, cursor->y);
 #endif
 
-        move_cursor_in_terminal(cursor->x + 1, cursor->y + 1);
+        move_cursor_in_terminal(cursor->rx, cursor->ry + 1);
     }
 
     /*restore the old settings*/

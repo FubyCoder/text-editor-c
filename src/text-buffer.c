@@ -20,6 +20,7 @@ text_buffer_t *create_text_buffer(size_t capacity) {
 
     buffer->capacity = capacity;
     buffer->count = 0;
+    buffer->index = 0;
 
     return buffer;
 }
@@ -66,4 +67,9 @@ void remove_char(text_buffer_t *buffer, size_t index) {
 
     buffer->data[buffer->count] = 0;
     buffer->count--;
+}
+
+void free_text_buffer(text_buffer_t *text_buffer) {
+    free(text_buffer->data);
+    free(text_buffer);
 }
