@@ -8,6 +8,8 @@
 #include "editor.h"
 #include "terminal.h"
 
+#define DEBUG 1
+
 const char *CLEAR_TERMINAL_STRING = "\033[2J\033[1;1H";
 
 void move_cursor_in_terminal(int x, int y) {
@@ -97,5 +99,10 @@ void update_window_size(editor_state_t *editor) {
     editor->terminal_height = w->ws_row;
 
     editor->max_text_window_height = editor->terminal_height - 1;
+
+#if DEBUG == 1
+    editor->max_text_window_height -= 1;
+#endif
+
     free(w);
 }

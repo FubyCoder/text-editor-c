@@ -13,6 +13,8 @@
 #include "text-buffer.h"
 #include "util.h"
 
+#define DEBUG 1
+
 void load_file_in_editor(editor_state_t *editor, char *file_path) {
     FILE *file = fopen(file_path, "r");
     editor->file_path = file_path;
@@ -67,7 +69,6 @@ void render_text(editor_state_t *editor, cursor_t *cursor) {
     }
 
     char terminal_cursor[20];
-    char line[20];
 
     int render_y = 0;
     size_t y = 0;
@@ -92,21 +93,21 @@ void render_text(editor_state_t *editor, cursor_t *cursor) {
     for (; render_y < MAX_ITEMS_TO_RENDER; y++, render_y++) {
         text_buffer_t *row = get_row(editor, y);
 
-        int number_size = get_number_of_chars(y + 1);
-        int number_of_spaces = line_number_size - number_size;
-        char spaces[number_of_spaces];
-
-        for (int i = 0; i <= number_of_spaces; i++) {
-            spaces[i] = ' ';
-        }
-
-        append_text(&buffer, spaces, number_of_spaces);
-        sprintf(line_number, " %zu  ", y + 1);
-        append_text(&buffer, line_number, number_size + 3);
-
         if (row == NULL) {
             append_text(&buffer, " ", 1);
         } else {
+            int number_size = get_number_of_chars(y + 1);
+            int number_of_spaces = line_number_size - number_size;
+            char spaces[number_of_spaces];
+
+            for (int i = 0; i <= number_of_spaces; i++) {
+                spaces[i] = ' ';
+            }
+
+            append_text(&buffer, spaces, number_of_spaces);
+            sprintf(line_number, " %zu  ", y + 1);
+            append_text(&buffer, line_number, number_size + 3);
+
             append_text(&buffer, row->data, row->count);
         }
 
@@ -121,6 +122,7 @@ void render_text(editor_state_t *editor, cursor_t *cursor) {
 void render_footer(editor_state_t *editor, cursor_t *cursor) {
     char footer_text[editor->terminal_width + 1];
     char text[editor->terminal_width * 2];
+
     sprintf(footer_text, " %zu:%zu ", cursor->y + 1, cursor->x + 1);
 
     int i = strlen(footer_text);
@@ -135,7 +137,6 @@ void render_footer(editor_state_t *editor, cursor_t *cursor) {
 }
 
 void render(editor_state_t *editor, cursor_t *cursor) {
-    // clear_terminal();
     render_text(editor, cursor);
     render_footer(editor, cursor);
 }
@@ -274,6 +275,12 @@ int main(int argc, char *argv[]) {
 
         render(editor, cursor);
         update_cursor_render_position(editor, cursor);
+
+#if DEBUG == 1
+        move_cursor_in_terminal(1, editor->terminal_height - 1);
+        printf("char: '%c' value: '%i'\n", c, c);
+
+#endif
 
         // The offset is used for the line number at the left of the terminal screen
         int offset = get_number_of_chars(editor->row_count + 1) + 3;
