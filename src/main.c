@@ -11,8 +11,7 @@
 #include "editor.h"
 #include "terminal.h"
 #include "text-buffer.h"
-
-#define DEBUG 1
+#include "util.h"
 
 void load_file_in_editor(editor_state_t *editor, char *file_path) {
     FILE *file = fopen(file_path, "r");
@@ -68,25 +67,42 @@ void render_text(editor_state_t *editor, cursor_t *cursor) {
     }
 
     char terminal_cursor[20];
+    char line[20];
 
     int render_y = 0;
     size_t y = 0;
 
-    // TODO: get this value inside editor->max_text_window_height (when it'll be added);
-    const int MAX_ITEMS_TO_RENDER = editor->terminal_height - 2 - 1;
+    int line_number_size = get_number_of_chars(editor->row_count + 1);
+    char line_number[line_number_size];
+
+    const int MAX_ITEMS_TO_RENDER = editor->max_text_window_height;
 
     if (editor->row_count < MAX_ITEMS_TO_RENDER) {
         y = 0;
     } else {
-        if (cursor->y + MAX_ITEMS_TO_RENDER < editor->row_count) {
+        if (cursor->y + MAX_ITEMS_TO_RENDER <= editor->row_count) {
             y = cursor->y;
         } else {
             y = editor->row_count - MAX_ITEMS_TO_RENDER;
         }
     }
 
+    append_text(&buffer, (char *)CLEAR_TERMINAL_STRING, strlen(CLEAR_TERMINAL_STRING));
+
     for (; render_y < MAX_ITEMS_TO_RENDER; y++, render_y++) {
         text_buffer_t *row = get_row(editor, y);
+
+        int number_size = get_number_of_chars(y + 1);
+        int number_of_spaces = line_number_size - number_size;
+        char spaces[number_of_spaces];
+
+        for (int i = 0; i <= number_of_spaces; i++) {
+            spaces[i] = ' ';
+        }
+
+        append_text(&buffer, spaces, number_of_spaces);
+        sprintf(line_number, " %zu  ", y + 1);
+        append_text(&buffer, line_number, number_size + 3);
 
         if (row == NULL) {
             append_text(&buffer, " ", 1);
@@ -100,6 +116,28 @@ void render_text(editor_state_t *editor, cursor_t *cursor) {
 
     write(STDOUT_FILENO, buffer, strlen(buffer));
     free(buffer);
+}
+
+void render_footer(editor_state_t *editor, cursor_t *cursor) {
+    char footer_text[editor->terminal_width + 1];
+    char text[editor->terminal_width * 2];
+    sprintf(footer_text, " %zu:%zu ", cursor->y + 1, cursor->x + 1);
+
+    int i = strlen(footer_text);
+    while (i < editor->terminal_width) {
+        strncat(footer_text, " ", 1);
+        i++;
+    }
+    sprintf(text, "\033[47m\033[30m%s\033[0m", footer_text);
+
+    move_cursor_in_terminal(1, editor->terminal_height);
+    write(STDOUT_FILENO, text, strlen(text));
+}
+
+void render(editor_state_t *editor, cursor_t *cursor) {
+    // clear_terminal();
+    render_text(editor, cursor);
+    render_footer(editor, cursor);
 }
 
 int main(int argc, char *argv[]) {
@@ -149,11 +187,12 @@ int main(int argc, char *argv[]) {
     TCSANOW tells tcsetattr to change attributes immediately. */
     tcsetattr(STDIN_FILENO, TCSANOW, &config);
 
-    clear_terminal();
-    render_text(editor, cursor);
+    render(editor, cursor);
 
     update_cursor_render_position(editor, cursor);
-    move_cursor_in_terminal(cursor->rx + 1, cursor->ry + 1);
+
+    int offset = get_number_of_chars(editor->row_count + 1) + 3;
+    move_cursor_in_terminal(cursor->rx + offset + 1, cursor->ry + 1);
 
     text_buffer_t *current_row;
 
@@ -233,20 +272,12 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        clear_terminal();
-        render_text(editor, cursor);
+        render(editor, cursor);
         update_cursor_render_position(editor, cursor);
 
-#if (DEBUG == 1)
-        printf("\n");
-        move_cursor_in_terminal(0, editor->terminal_height - 1);
-        printf("cursor pos render:(%zu,%zu) real:(%zu,%zu) window-size(%i x %i)\n", cursor->rx, cursor->ry, cursor->x,
-               cursor->y, editor->terminal_width, editor->terminal_height);
-        // move_cursor_in_terminal(0, editor->terminal_height - 1);
-        // printf("Filename : %s\n", editor->file_path);
-#endif
-
-        move_cursor_in_terminal(cursor->rx + 1, cursor->ry + 1);
+        // The offset is used for the line number at the left of the terminal screen
+        int offset = get_number_of_chars(editor->row_count + 1) + 3;
+        move_cursor_in_terminal(cursor->rx + offset + 1, cursor->ry + 1);
     }
 
     /*restore the old settings*/

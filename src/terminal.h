@@ -3,6 +3,8 @@
 #include "editor.h"
 #include <sys/ioctl.h>
 
+extern const char *CLEAR_TERMINAL_STRING;
+
 enum KEY_ACTION {
     KEY_NULL = 0,    /* NULL */
     CTRL_C = 3,      /* Ctrl-c */

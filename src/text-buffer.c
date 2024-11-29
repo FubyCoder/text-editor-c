@@ -31,12 +31,14 @@ void resize_buffer(text_buffer_t *buffer) {
     }
 
     buffer->capacity *= 2;
-    buffer->data = realloc(buffer->data, buffer->capacity);
+    char *tmp = realloc(buffer->data, buffer->capacity);
 
     if (buffer->data == NULL) {
         free(buffer);
         return;
     }
+
+    buffer->data = tmp;
 }
 
 void insert_char(text_buffer_t *buffer, size_t index, char *c) {

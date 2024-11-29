@@ -31,12 +31,19 @@ void insert_and_move_rows(text_buffer_t **elements, size_t count, size_t index, 
 
 void insert_row(editor_state_t *editor, size_t index, text_buffer_t *row) {
     editor->row_count++;
-    editor->rows = realloc(editor->rows, editor->row_count * sizeof(text_buffer_t));
+
+    text_buffer_t **tmp = realloc(editor->rows, editor->row_count * sizeof(text_buffer_t));
+
+    if (tmp == NULL) {
+        return;
+    }
+
+    editor->rows = tmp;
     insert_and_move_rows(editor->rows, editor->row_count, index, row);
 }
 
 void merge_rows(editor_state_t *editor, text_buffer_t *row, text_buffer_t *row_to_append) {
-    char *tmp = realloc(row->data, row->capacity + row_to_append->capacity);
+    char *tmp = realloc(row->data, row->capacity + row_to_append->count + 1);
 
     if (tmp == NULL) {
         return;

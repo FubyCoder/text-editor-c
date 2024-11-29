@@ -95,5 +95,7 @@ void update_window_size(editor_state_t *editor) {
 
     editor->terminal_width = w->ws_col;
     editor->terminal_height = w->ws_row;
+
+    editor->max_text_window_height = editor->terminal_height - 1;
     free(w);
 }

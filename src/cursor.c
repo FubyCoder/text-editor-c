@@ -1,8 +1,10 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "cursor.h"
 #include "editor.h"
 #include "text-buffer.h"
-#include <stdio.h>
-#include <stdlib.h>
+#include "util.h"
 
 cursor_t *create_cursor(size_t x, size_t y) {
     cursor_t *cursor = malloc(sizeof(cursor_t));
@@ -13,6 +15,8 @@ cursor_t *create_cursor(size_t x, size_t y) {
 
     cursor->x = x;
     cursor->y = y;
+    cursor->rx = x;
+    cursor->ry = y;
     return cursor;
 }
 
@@ -45,13 +49,12 @@ void update_cursor_render_position(editor_state_t *editor, cursor_t *cursor) {
         cursor->rx = cursor->x;
     }
 
-    // TODO: get this value inside editor->max_text_window_height (when it'll be added);
-    const int MAX_ITEMS_TO_RENDER = editor->terminal_height - 2;
+    const int MAX_ITEMS_TO_RENDER = editor->max_text_window_height;
 
     if (editor->row_count < MAX_ITEMS_TO_RENDER) {
         cursor->ry = cursor->y;
     } else {
-        if (cursor->y + MAX_ITEMS_TO_RENDER < editor->row_count) {
+        if (cursor->y + MAX_ITEMS_TO_RENDER <= editor->row_count) {
             cursor->ry = 0;
         } else {
             cursor->ry = MAX_ITEMS_TO_RENDER - (editor->row_count - cursor->y);
