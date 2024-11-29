@@ -14,6 +14,7 @@ enum KEY_ACTION {
     TAB = 9,         /* Tab */
     CTRL_L = 12,     /* Ctrl+l */
     ENTER = 13,      /* Enter */
+    CTRL_O = 15,
     CTRL_Q = 17,     /* Ctrl-q */
     CTRL_S = 19,     /* Ctrl-s */
     CTRL_U = 21,     /* Ctrl-u */

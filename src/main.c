@@ -45,10 +45,23 @@ void load_file_in_editor(editor_state_t *editor, char *file_path) {
             append_char(row, &c);
         }
     }
+}
 
-    if (row->count > 0) {
-        append_row(editor, row);
+void save_file(editor_state_t *editor, char *file_path) {
+    if (!file_path) {
+        return;
     }
+
+    FILE *file = fopen(file_path, "w");
+
+    for (size_t i = 0; i < editor->row_count; i++) {
+        fputs(editor->rows[i]->data, file);
+        if (i < editor->row_count - 1) {
+            fputs("\n", file);
+        }
+    };
+
+    fclose(file);
 }
 
 void append_text(char **buffer, char *text, size_t size) {
@@ -123,7 +136,7 @@ void render_footer(editor_state_t *editor, cursor_t *cursor) {
     char footer_text[editor->terminal_width + 1];
     char text[editor->terminal_width * 2];
 
-    sprintf(footer_text, " %zu:%zu ", cursor->y + 1, cursor->x + 1);
+    sprintf(footer_text, " %zu:%zu - %s", cursor->y + 1, cursor->x + 1, editor->file_path);
 
     int i = strlen(footer_text);
     while (i < editor->terminal_width) {
@@ -261,11 +274,21 @@ int main(int argc, char *argv[]) {
                 move_cursor(cursor, cursor->x, cursor->y + 1);
             }
         } else if (c == ARROW_LEFT) {
-            move_cursor(cursor, cursor->rx - 1, cursor->y);
+            if (cursor->y > 0 && cursor->x == 0) {
+                text_buffer_t *row = get_row(editor, cursor->y - 1);
+
+                move_cursor(cursor, row->count, cursor->y - 1);
+            } else {
+                move_cursor(cursor, cursor->rx - 1, cursor->y);
+            }
         } else if (c == ARROW_RIGHT) {
             if (cursor->x < current_row->count) {
                 move_cursor(cursor, cursor->rx + 1, cursor->y);
+            } else {
+                move_cursor(cursor, 0, cursor->y + 1);
             }
+        } else if (c == CTRL_O) {
+            save_file(editor, editor->file_path);
         } else {
             if (isprint(c)) {
                 insert_char(current_row, cursor->rx, (char *)&c);
@@ -278,7 +301,7 @@ int main(int argc, char *argv[]) {
 
 #if DEBUG == 1
         move_cursor_in_terminal(1, editor->terminal_height - 1);
-        printf("char: '%c' value: '%i'\n", c, c);
+        printf(" ^O Save \n", c, c);
 
 #endif
 
