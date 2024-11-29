@@ -74,6 +74,22 @@ void append_text(char **buffer, char *text, size_t size) {
     strncat(*buffer, text, size);
 }
 
+void append_text_slice(char **buffer, char *text, size_t start, size_t end) {
+    size_t size = (end - start);
+
+    if (size <= 0) {
+        return;
+    }
+
+    char *tmp = realloc(*buffer, (strlen(*buffer) + size + 1));
+    if (tmp == NULL) {
+        return;
+    }
+
+    *buffer = tmp;
+    strncat(*buffer, text + start, size);
+}
+
 void render_text(editor_state_t *editor, cursor_t *cursor) {
     char *buffer = calloc(1, sizeof(char));
 
@@ -112,6 +128,7 @@ void render_text(editor_state_t *editor, cursor_t *cursor) {
             int number_size = get_number_of_chars(y + 1);
             int number_of_spaces = line_number_size - number_size;
             char spaces[number_of_spaces];
+            int end = row->count;
 
             for (int i = 0; i <= number_of_spaces; i++) {
                 spaces[i] = ' ';
@@ -121,7 +138,15 @@ void render_text(editor_state_t *editor, cursor_t *cursor) {
             sprintf(line_number, " %zu  ", y + 1);
             append_text(&buffer, line_number, number_size + 3);
 
-            append_text(&buffer, row->data, row->count);
+            if (row->count > editor->max_text_window_width) {
+                if (cursor->ox + editor->max_text_window_width < row->count) {
+                    end = cursor->ox + editor->max_text_window_width;
+                }
+            }
+
+            if (cursor->ox >= 0 && cursor->ox < row->count) {
+                append_text_slice(&buffer, row->data, cursor->ox, end);
+            }
         }
 
         sprintf(terminal_cursor, "\033[%d;%dH", render_y + 2, 1);
@@ -227,9 +252,9 @@ int main(int argc, char *argv[]) {
             if (cursor->rx == 0 && cursor->y > 0) {
                 size_t new_cursor_x = editor->rows[cursor->y - 1]->count;
                 merge_rows(editor, editor->rows[cursor->y - 1], editor->rows[cursor->y]);
-                move_cursor(cursor, new_cursor_x, cursor->y - 1);
+                set_cursor_position(cursor, editor, new_cursor_x, cursor->y - 1);
             } else {
-                move_cursor(cursor, cursor->rx - 1, cursor->y);
+                set_cursor_position(cursor, editor, cursor->rx - 1, cursor->y);
             }
 
         } else if (c == DEL_KEY) {
@@ -266,42 +291,42 @@ int main(int argc, char *argv[]) {
             }
 
             insert_row(editor, cursor->y + 1, new_line);
-            move_cursor(cursor, 0, cursor->y + 1);
+            set_cursor_position(cursor, editor, 0, cursor->y + 1);
         } else if (c == ARROW_UP) {
-            move_cursor(cursor, cursor->x, cursor->y - 1);
+            set_cursor_position(cursor, editor, cursor->x, cursor->y - 1);
         } else if (c == ARROW_DOWN) {
             if (cursor->y + 1 < editor->row_count) {
-                move_cursor(cursor, cursor->x, cursor->y + 1);
+                set_cursor_position(cursor, editor, cursor->x, cursor->y + 1);
             }
         } else if (c == ARROW_LEFT) {
             if (cursor->y > 0 && cursor->x == 0) {
                 text_buffer_t *row = get_row(editor, cursor->y - 1);
 
-                move_cursor(cursor, row->count, cursor->y - 1);
+                set_cursor_position(cursor, editor, row->count, cursor->y - 1);
             } else {
-                move_cursor(cursor, cursor->rx - 1, cursor->y);
+                set_cursor_position(cursor, editor, cursor->rx - 1, cursor->y);
             }
         } else if (c == ARROW_RIGHT) {
             if (cursor->x < current_row->count) {
-                move_cursor(cursor, cursor->rx + 1, cursor->y);
+                set_cursor_position(cursor, editor, cursor->rx + 1, cursor->y);
             } else {
-                move_cursor(cursor, 0, cursor->y + 1);
+                set_cursor_position(cursor, editor, 0, cursor->y + 1);
             }
         } else if (c == CTRL_O) {
             save_file(editor, editor->file_path);
         } else {
             if (isprint(c)) {
                 insert_char(current_row, cursor->rx, (char *)&c);
-                move_cursor(cursor, cursor->rx + 1, cursor->y);
+                set_cursor_position(cursor, editor, cursor->rx + 1, cursor->y);
             }
         }
 
-        render(editor, cursor);
         update_cursor_render_position(editor, cursor);
+        render(editor, cursor);
 
 #if DEBUG == 1
         move_cursor_in_terminal(1, editor->terminal_height - 1);
-        printf(" ^O Save \n", c, c);
+        printf(" ^O Save \n");
 
 #endif
 

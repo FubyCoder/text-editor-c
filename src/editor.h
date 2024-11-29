@@ -9,7 +9,9 @@ typedef struct EditorState {
 
     int terminal_width;
     int terminal_height;
+
     int max_text_window_height;
+    int max_text_window_width;
 } editor_state_t;
 
 void append_row(editor_state_t *editor, text_buffer_t *row);

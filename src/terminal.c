@@ -7,6 +7,7 @@
 
 #include "editor.h"
 #include "terminal.h"
+#include "util.h"
 
 #define DEBUG 1
 
@@ -99,6 +100,7 @@ void update_window_size(editor_state_t *editor) {
     editor->terminal_height = w->ws_row;
 
     editor->max_text_window_height = editor->terminal_height - 1;
+    editor->max_text_window_width = editor->terminal_width - 3 - get_number_of_chars(editor->row_count + 1);
 
 #if DEBUG == 1
     editor->max_text_window_height -= 1;

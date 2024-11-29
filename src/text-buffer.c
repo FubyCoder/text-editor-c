@@ -11,7 +11,7 @@ text_buffer_t *create_text_buffer(size_t capacity) {
         return NULL;
     }
 
-    buffer->data = calloc(capacity, 1);
+    buffer->data = malloc(capacity);
 
     if (buffer->data == NULL) {
         free(buffer);

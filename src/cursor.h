@@ -20,8 +20,12 @@ typedef struct Cursor {
     // Render position
     size_t rx;
     size_t ry;
+
+    // Offset position
+    size_t ox;
+    size_t oy;
 } cursor_t;
 
 cursor_t *create_cursor(size_t x, size_t y);
-void move_cursor(cursor_t *cursor, long new_x, long new_y);
+void set_cursor_position(cursor_t *cursor, editor_state_t *editor, long new_x, long new_y);
 void update_cursor_render_position(editor_state_t *editor, cursor_t *cursor);
