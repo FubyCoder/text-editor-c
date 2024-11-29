@@ -108,8 +108,8 @@ int read_key(int fd) {
                         return END_KEY;
                     case 'M':
                         // Mouse Sequence
-                        if (read(fd, seq + 2, 1) == 0) {
-                            return ESC;
+                        if (read(fd, seq + 2, 1) <= 0) {
+                            return -1;
                         }
 
                         char t[5];
@@ -128,6 +128,8 @@ int read_key(int fd) {
                         } else if (seq[2] == '`') {
                             // SCROLL_UP
                             return ARROW_UP;
+                        } else {
+                            return -1;
                         }
                     }
                 }
