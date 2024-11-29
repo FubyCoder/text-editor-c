@@ -50,6 +50,21 @@ void set_cursor_position(cursor_t *cursor, editor_state_t *editor, long new_x, l
         cursor->y = new_y;
         cursor->ry = new_y;
     }
+
+    if (editor->text_window_start + editor->max_text_window_height <= cursor->y + editor->vertical_offset) {
+        editor->text_window_start = (cursor->y + editor->vertical_offset) - (editor->max_text_window_height - 1);
+    } else if (cursor->y - editor->vertical_offset < editor->text_window_start) {
+        editor->text_window_start = cursor->y - editor->vertical_offset;
+    }
+
+    if (editor->text_window_start > editor->row_count) {
+        editor->text_window_start = editor->row_count;
+    }
+
+    if (editor->text_window_start < 0) {
+        editor->text_window_start = 0;
+    }
+    cursor->ry = cursor->y - editor->text_window_start;
 }
 
 void update_cursor_render_position(editor_state_t *editor, cursor_t *cursor) {
@@ -67,15 +82,5 @@ void update_cursor_render_position(editor_state_t *editor, cursor_t *cursor) {
         cursor->ox = 0;
     }
 
-    const int MAX_ITEMS_TO_RENDER = editor->max_text_window_height;
-
-    if (editor->row_count < MAX_ITEMS_TO_RENDER) {
-        cursor->ry = cursor->y;
-    } else {
-        if (cursor->y + MAX_ITEMS_TO_RENDER <= editor->row_count) {
-            cursor->ry = 0;
-        } else {
-            cursor->ry = MAX_ITEMS_TO_RENDER - (editor->row_count - cursor->y);
-        }
-    }
+    cursor->ry = cursor->y - editor->text_window_start;
 }

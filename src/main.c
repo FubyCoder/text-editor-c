@@ -100,26 +100,14 @@ void render_text(editor_state_t *editor, cursor_t *cursor) {
     char terminal_cursor[20];
 
     int render_y = 0;
-    size_t y = 0;
+    size_t y = editor->text_window_start;
 
     int line_number_size = get_number_of_chars(editor->row_count + 1);
     char line_number[line_number_size];
 
-    const int MAX_ITEMS_TO_RENDER = editor->max_text_window_height;
-
-    if (editor->row_count < MAX_ITEMS_TO_RENDER) {
-        y = 0;
-    } else {
-        if (cursor->y + MAX_ITEMS_TO_RENDER <= editor->row_count) {
-            y = cursor->y;
-        } else {
-            y = editor->row_count - MAX_ITEMS_TO_RENDER;
-        }
-    }
-
     append_text(&buffer, (char *)CLEAR_TERMINAL_STRING, strlen(CLEAR_TERMINAL_STRING));
 
-    for (; render_y < MAX_ITEMS_TO_RENDER; y++, render_y++) {
+    for (; render_y < editor->max_text_window_height; y++, render_y++) {
         text_buffer_t *row = get_row(editor, y);
 
         if (row == NULL) {

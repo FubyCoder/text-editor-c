@@ -7,11 +7,17 @@ typedef struct EditorState {
     unsigned long row_count;
     char* file_path;
 
-    int terminal_width;
-    int terminal_height;
+    unsigned int terminal_width;
+    unsigned int terminal_height;
 
-    int max_text_window_height;
-    int max_text_window_width;
+    unsigned int max_text_window_height;
+    unsigned int max_text_window_width;
+
+
+    // Used for scroll and avoid scrolls when cursor is inside this window
+    unsigned int text_window_start;
+
+    unsigned int vertical_offset;
 } editor_state_t;
 
 void append_row(editor_state_t *editor, text_buffer_t *row);

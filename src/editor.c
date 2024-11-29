@@ -92,6 +92,8 @@ editor_state_t *create_editor_file() {
 
     editor->row_count = 0;
     editor->rows = rows;
+    editor->text_window_start = 0;
+    editor->vertical_offset = 5;
 
     return editor;
 }
