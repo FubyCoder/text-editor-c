@@ -39,3 +39,6 @@ void clear_terminal();
 int read_key(int fd);
 
 void update_window_size(editor_state_t *editor);
+
+void disable_raw_mode();
+void enable_raw_mode();

@@ -185,35 +185,7 @@ int main(int argc, char *argv[]) {
         load_file_in_editor(editor, argv[1]);
     }
 
-    static struct termios old_config, config;
-
-    /*tcgetattr gets the parameters of the current terminal
-    STDIN_FILENO will tell tcgetattr that it should write the settings
-    of stdin to oldt*/
-    tcgetattr(STDIN_FILENO, &old_config);
-    /*now the settings will be copied*/
-    config = old_config;
-
-    /*
-     * input modes: no break, no CR to NL, no parity check, no strip char,
-     * no start/stop output control.
-     */
-    config.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-    /* output modes - disable post processing */
-    config.c_oflag &= ~(OPOST);
-    /* control modes - set 8 bit chars */
-    config.c_cflag |= (CS8);
-    /* local modes - choing off, canonical off, no extended functions,
-     * no signal chars (^Z,^C) */
-    config.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-    /* control chars - set return condition: min number of bytes and timer. */
-    config.c_cc[VMIN] = 0;  /* Return each byte, or zero for timeout. */
-    config.c_cc[VTIME] = 1; /* 100 ms timeout (unit is tens of second). */
-
-    /*Those new settings will be set to STDIN
-    TCSANOW tells tcsetattr to change attributes immediately. */
-    tcsetattr(STDIN_FILENO, TCSANOW, &config);
-
+    enable_raw_mode();
     render(editor, cursor);
 
     update_cursor_render_position(editor, cursor);
@@ -298,7 +270,9 @@ int main(int argc, char *argv[]) {
             if (cursor->x < current_row->count) {
                 set_cursor_position(cursor, editor, cursor->rx + 1, cursor->y);
             } else {
-                set_cursor_position(cursor, editor, 0, cursor->y + 1);
+                if (cursor->y + 1 < editor->row_count) {
+                    set_cursor_position(cursor, editor, 0, cursor->y + 1);
+                }
             }
         } else if (c == CTRL_O) {
             save_file(editor, editor->file_path);
@@ -313,6 +287,8 @@ int main(int argc, char *argv[]) {
         render(editor, cursor);
 
 #if DEBUG == 1
+        move_cursor_in_terminal(1, editor->terminal_height - 2);
+        printf(" Char Pressed char: '%c' val: '%i' \n", c, c);
         move_cursor_in_terminal(1, editor->terminal_height - 1);
         printf(" ^O Save \n");
 
@@ -323,8 +299,6 @@ int main(int argc, char *argv[]) {
         move_cursor_in_terminal(cursor->rx + offset + 1, cursor->ry + 1);
     }
 
-    /*restore the old settings*/
-    tcsetattr(STDIN_FILENO, TCSANOW, &old_config);
-
+    disable_raw_mode();
     return 0;
 }
